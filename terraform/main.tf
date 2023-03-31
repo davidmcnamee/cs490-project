@@ -19,6 +19,18 @@ provider "helm" {
   }
 }
 
+resource "kubectl_manifest" "docker_credentials" {
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: docker-credentials
+      namespace: cs490-project
+    data:
+      config.json: ${base64encode(file("~/.docker/config.json"))}
+  YAML
+}
+
 resource "helm_release" "mysql_chart" {
   name             = "mysql"
   repository       = "https://charts.bitnami.com/bitnami"
@@ -102,6 +114,21 @@ resource "kubectl_manifest" "tekton_pipeline_crds" {
   yaml_body = each.value
   depends_on = [kubectl_manifest.tekton_ns]
 }
+data "http" "tekton_git_clone_yaml" {
+  url = "https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.9/git-clone.yaml"
+}
+resource "kubectl_manifest" "tekton_git_clone" {
+  yaml_body = data.http.tekton_git_clone_yaml.response_body
+  override_namespace = "cs490-project"
+}
+data "http" "tekton_kaniko_yaml" {
+  url = "https://raw.githubusercontent.com/tektoncd/catalog/main/task/kaniko/0.6/kaniko.yaml"
+}
+resource "kubectl_manifest" "tekton_kaniko" {
+  yaml_body = data.http.tekton_kaniko_yaml.response_body
+  override_namespace = "cs490-project"
+}
+
 
 resource "random_password" "mysql_passwords" {
   length  = 16
