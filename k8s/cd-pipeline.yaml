@@ -44,10 +44,11 @@ spec:
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: clone-build-push-run
-  argocd.argoproj.io/sync-wave: "-2"
-  argocd.argoproj.io/hook: PreSync
-  argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+  generateName: clone-build-push-run-
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
   # taskRunSpecs:
   #   - pipelineTaskName: fetch-source
