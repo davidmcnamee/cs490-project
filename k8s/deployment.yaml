@@ -11,6 +11,7 @@ metadata:
         "name": "clone-build-push-run",
         "namespace": "cs490-project"
       }
+    argocd.argoproj.io/hook-cascade: "true"
 spec:
   revisionHistoryLimit: 0
   selector:
