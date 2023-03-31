@@ -50,17 +50,17 @@ metadata:
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
-  # taskRunSpecs:
-  #   - pipelineTaskName: fetch-source
-  #     metadata: 
-  #       annotations:
-  #         argocd.argoproj.io/sync-wave: "-2"
-  #         argocd.argoproj.io/hook: Sync
-  #   - pipelineTaskName: build-push
-  #     metadata: 
-  #       annotations:
-  #         argocd.argoproj.io/sync-wave: "-2"
-  #         argocd.argoproj.io/hook: Sync
+  taskRunSpecs:
+    - pipelineTaskName: fetch-source
+      metadata: 
+        annotations:
+          argocd.argoproj.io/sync-wave: "-2"
+          argocd.argoproj.io/hook: Sync
+    - pipelineTaskName: build-push
+      metadata: 
+        annotations:
+          argocd.argoproj.io/sync-wave: "-2"
+          argocd.argoproj.io/hook: Sync
   pipelineRef:
     name: clone-build-push
   podTemplate:
