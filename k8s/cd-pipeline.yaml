@@ -42,7 +42,10 @@ spec:
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: clone-build-push-run
+  generateName: clone-build-push-run-
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   pipelineRef:
     name: clone-build-push
