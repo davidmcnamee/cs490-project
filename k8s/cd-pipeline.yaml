@@ -43,18 +43,18 @@ apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
   name: clone-build-push-run
-  annotations:
-    argocd.argoproj.io/hook: PreSync
+  # annotations:
+  #   argocd.argoproj.io/hook: PreSync
 spec:
-  taskRunSpecs:
-    - pipelineTaskName: fetch-source
-      metadata:
-        annotations:
-          argocd.argoproj.io/hook: PreSync
-    - pipelineTaskName: build-push
-      metadata:
-        annotations:
-          argocd.argoproj.io/hook: PreSync
+  # taskRunSpecs:
+  #   - pipelineTaskName: fetch-source
+  #     metadata:
+  #       annotations:
+  #         argocd.argoproj.io/hook: PreSync
+  #   - pipelineTaskName: build-push
+  #     metadata:
+  #       annotations:
+  #         argocd.argoproj.io/hook: PreSync
   pipelineRef:
     name: clone-build-push
   podTemplate:
