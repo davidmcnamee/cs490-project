@@ -46,7 +46,7 @@ kind: PipelineRun
 metadata:
   generateName: clone-build-push-run-
   argocd.argoproj.io/sync-wave: "-2"
-  argocd.argoproj.io/hook: Sync
+  argocd.argoproj.io/hook: PreSync
   argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
   # taskRunSpecs:
