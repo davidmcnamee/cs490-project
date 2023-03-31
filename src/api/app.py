@@ -117,7 +117,7 @@ async def calc_output(
     product_category: str,
     product_brand: str,
     contribution_margin: float,
-    retailer_to_list_price: Dict[str, Optional[float]],
+    retailer_to_list_price: Dict[str, float],
     num_years: int,
     desired_irr: float,
     inital_investment: float,
@@ -148,8 +148,7 @@ async def calc_output(
             total_manufacturer_gross_revenue = 0
             total_fixed_costs = 0
             for i, retailer in enumerate(retailers):
-                list_price = retailer_to_list_price[retailer.name]
-                assert list_price # TODO: if None (retailer doesn't have a list price), we should look up in 3rd-party API
+                list_price = retailer_to_list_price.get(retailer.name, await get_average_price(product_category))
                 data_points = await db.query_raw(
                     """
                     SELECT *
@@ -174,8 +173,6 @@ async def calc_output(
                 )
 
                 volume = sum([d.volume_sold for d in data_points]) / len(data_points) if data_points else 0
-                # list_price either provided by user OR external API (category) => average list_price
-                list_price = retailer_to_list_price.get(retailer.name) or await get_average_price(product_category)
                 retailer_price = list_price * (1 + contribution_margin)
                 retailer_sales_revenue = volume * retailer_price
                 manufacturer_sales_revenue = volume * list_price

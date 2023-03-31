@@ -1,7 +1,7 @@
 # Seeds database with mock data
 
 from prisma import Prisma
-from prisma.types import RetailerCreateInput, ProductRetailerYearCreateInput, ProductCreateInput
+from prisma.types import RetailerCreateInput, ProductRetailerYearCreateInput, ProductCreateInput, RetailerYearCreateInput
 import asyncio
 import random
 
@@ -12,6 +12,7 @@ async def main():
     await db.retailer.delete_many()
     await db.product.delete_many()
     await db.productretaileryear.delete_many()
+    await db.retaileryear.delete_many()
     retailer_data = [
         ['Walmart', 'USA', 'WMT'],
         ['Loblaws', 'Canada', 'LOB'],
@@ -42,6 +43,19 @@ async def main():
         ) for row in product_data]
     )
     retailers = await db.retailer.find_many()
+    await db.retaileryear.create_many(
+        data = [
+        RetailerYearCreateInput(
+            retailer_id=random.choice(retailers).id,
+            year=random.randint(1, 5),
+            retailer_markup=random.random() * 0.4,
+            display_costs=random.randint(0, 50000),
+            priority_shelving_costs=random.randint(0, 50000),
+            preferred_vendor_agreement_costs=random.randint(0, 50000),
+        )
+        for _ in range(300)],
+        skip_duplicates=True
+    )
     products = await db.product.find_many()
     await db.productretaileryear.create_many(
         data = [

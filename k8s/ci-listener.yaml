@@ -1,0 +1,317 @@
+# Finally, we need something to receive our cloudevent announcing success!
+# That is this services only purpose
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-display
+  labels:
+    app: event-display
+spec:
+  type: ClusterIP
+  ports:
+    - name: listener
+      port: 8080
+      protocol: TCP
+  selector:
+    app: event-display
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: event-display
+  labels:
+    app: event-display
+spec:
+  hostname: event-display
+  containers:
+  - name: web
+    image: gcr.io/knative-releases/github.com/knative/eventing-sources/cmd/event_display
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: cs490-triggertemplate
+spec:
+  params:
+    - name: gitrevision
+      description: The git revision
+      default: master
+    - name: gitrepositoryurl
+      description: The git repository url
+    - name: namespace
+      description: The namespace to create the resources
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: cs490-pipeline-run-
+        namespace: $(tt.params.namespace)
+      spec:
+        serviceAccountName: default
+        pipelineRef:
+          name: cs490-pipeline
+        params:
+        - name: git-revision
+          value: $(tt.params.gitrevision)
+        - name: git-url
+          value: $(tt.params.gitrepositoryurl)
+        - name: url
+          value: davidmc1/cs490-project:latest
+        workspaces:
+        - name: git-source
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Gi
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: cs490-pipelinebinding
+spec:
+  params:
+    - name: gitrevision
+      value: $(body.head_commit.id)
+    - name: namespace
+      value: cs490-project
+    - name: gitrepositoryurl
+      value: "https://github.com/$(body.repository.full_name)"
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: cs490-listener
+spec:
+  serviceAccountName: default
+  triggers:
+    - bindings:
+      - ref: cs490-pipelinebinding
+      template:
+        ref: cs490-triggertemplate
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: create-ingress
+spec:
+  volumes:
+  - name: work
+    emptyDir: {}
+
+  params:
+  - name: CreateCertificate
+    description: "Enables/disables the creation of a self-signed certificate for $(params.ExternalDomain)"
+    default: "true"
+  - name: CertificateKeyPassphrase
+    description: "Phrase that protects private key. This must be provided when the self-signed certificate is created"
+  - name: CertificateSecretName
+    description: "Secret name for Ingress certificate. The Secret should not exist if the self-signed certificate creation is enabled"
+  - name: ExternalDomain
+    description: "The external domain for the EventListener e.g. `$(params.EventListenerName).PROXYIP.nip.io`"
+  - name: Service
+    description: "The name of the Service used in the Ingress. This will also be the name of the Ingress."
+  - name: ServicePort
+    description: "The service port that the ingress is being created on"
+  - name: ServiceUID
+    description: "The uid of the service. If set, this creates an owner reference on the service"
+    default: ""
+
+  steps:
+  - name: generate-certificate
+    image: frapsoft/openssl
+    volumeMounts:
+    - name: work
+      mountPath: /var/tmp/work
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      cat <<EOF | sh
+      #!/bin/sh
+      if [ $(params.CreateCertificate) = "false" ];then
+        exit 0
+      fi
+      mkdir /var/tmp/work/ingress
+      openssl genrsa -des3 -out /var/tmp/work/ingress/key.pem -passout pass:$(params.CertificateKeyPassphrase) 2048
+      openssl req -x509 -new -nodes -key /var/tmp/work/ingress/key.pem -sha256 -days 1825 -out /var/tmp/work/ingress/certificate.pem -passin pass:$(params.CertificateKeyPassphrase) -subj /CN=$(params.ExternalDomain)
+      openssl rsa -in /var/tmp/work/ingress/key.pem -out /var/tmp/work/ingress/key.pem -passin pass:$(params.CertificateKeyPassphrase)
+      EOF
+  - name: create-certificate-secret
+    image: lachlanevenson/k8s-kubectl:latest
+    volumeMounts:
+    - name: work
+      mountPath: /var/tmp/work
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      cat <<EOF | sh
+      #!/bin/sh
+      if [ $(params.CreateCertificate) = "false" ];then
+        exit 0
+      fi
+      kubectl create secret tls $(params.CertificateSecretName) --cert=/var/tmp/work/ingress/certificate.pem --key=/var/tmp/work/ingress/key.pem || true
+      EOF
+  - name: create-ingress
+    image: lachlanevenson/k8s-kubectl:latest
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      if [ -n "$(params.ServiceUID)" ];then
+        cat <<EOF | kubectl create -f - || true
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: $(params.Service)
+          ownerReferences:
+          - name: $(params.Service)
+            apiVersion: v1
+            kind: Service
+            uid: $(params.ServiceUID)
+        spec:
+          tls:
+          - secretName: $(params.CertificateSecretName)
+            hosts:
+            - $(params.ExternalDomain)
+          rules:
+          - host: $(params.ExternalDomain)
+            http:
+              paths:
+              - pathType: ImplementationSpecific
+                backend:
+                  service:
+                    name: $(params.Service)
+                    port:
+                      number: $(params.ServicePort)
+      EOF
+      else
+        cat <<EOF | kubectl create -f - || true
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: $(params.Service)
+        spec:
+          tls:
+          - secretName: $(params.CertificateSecretName)
+            hosts:
+            - $(params.ExternalDomain)
+          rules:
+          - host: $(params.ExternalDomain)
+            http:
+              paths:
+              - pathType: ImplementationSpecific
+                backend:
+                  service:
+                    name: $(params.Service)
+                    port:
+                      number: $(params.ServicePort)
+      EOF
+      fi
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: create-webhook
+spec:
+  volumes:
+  - name: github-secret
+    secret:
+      secretName: $(params.GitHubSecretName)
+
+  params:
+  - name: ExternalDomain
+    description: "The external domain for the EventListener e.g. `$(params.EventListenerName).<PROXYIP>.nip.io`"
+  - name: GitHubUser
+    description: "The GitHub user"
+  - name: GitHubRepo
+    description: "The GitHub repo where the webhook will be created"
+  - name: GitHubOrg
+    description: "The GitHub organization where the webhook will be created"
+  - name: GitHubSecretName
+    description: "The Secret name for GitHub access token. This is always mounted and must exist"
+  - name: GitHubAccessTokenKey
+    description: "The GitHub access token key name"
+  - name: GitHubSecretStringKey
+    description: "The GitHub secret string key name"
+  - name: GitHubDomain
+    description: "The GitHub domain. Override for GitHub Enterprise"
+    default: "github.com"
+  - name: WebhookEvents
+    description: "List of events the webhook will send notifications for"
+    default: '[\"push\",\"pull_request\"]'
+  steps:
+  - name: create-webhook
+    image: curlimages/curl:latest
+    volumeMounts:
+    - name: github-secret
+      mountPath: /var/secret
+    command:
+    - sh
+    args:
+    - -ce
+    - |
+      set -e
+      echo "Create Webhook"
+      if [ $(params.GitHubDomain) = "github.com" ];then
+        curl -v -d "{\"name\": \"web\",\"active\": true,\"events\": $(params.WebhookEvents),\"config\": {\"url\": \"https://$(params.ExternalDomain)\",\"content_type\": \"json\",\"insecure_ssl\": \"1\" ,\"secret\": \"$(cat /var/secret/$(params.GitHubSecretStringKey))\"}}" -X POST -u $(params.GitHubUser):$(cat /var/secret/$(params.GitHubAccessTokenKey)) -L https://api.github.com/repos/$(params.GitHubOrg)/$(params.GitHubRepo)/hooks
+      else
+        curl -d "{\"name\": \"web\",\"active\": true,\"events\": $(params.WebhookEvents),\"config\": {\"url\": \"https://$(params.ExternalDomain)/\",\"content_type\": \"json\",\"insecure_ssl\": \"1\" ,\"secret\": \"$(cat /var/secret/$(params.GitHubSecretStringKey))\"}}" -X POST -u $(params.GitHubUser):$(cat /var/secret/$(params.GitHubAccessTokenKey)) -L https://$(params.GitHubDomain)/api/v3/repos/$(params.GitHubOrg)/$(params.GitHubRepo)/hooks
+      fi
+---
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: create-ingress-run
+spec:
+  taskRef:
+    name: create-ingress
+  params:
+  - name: CreateCertificate
+    value: "true"
+  - name: CertificateKeyPassphrase
+    value: asecretphrase
+  - name: CertificateSecretName
+    value: ingresssecret
+  - name: ExternalDomain
+    value: cs490listener.mcnamee.io
+  - name: Service
+    value: cs490-listener
+  - name: ServicePort
+    value: "8080"
+  timeout: 1000s
+  serviceAccountName: default
+---
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: create-webhook-run
+spec:
+  taskRef:
+    name: create-webhook
+  params:
+  - name: GitHubOrg
+    value: "davidmcnamee"
+  - name: GitHubUser
+    value: "davidmcnamee"
+  - name: GitHubRepo
+    value: "cs490-project"
+  - name: GitHubSecretName
+    value: webhook-secret
+  - name: GitHubAccessTokenKey
+    value: token
+  - name: GitHubSecretStringKey
+    value: secret
+  - name: ExternalDomain
+    value: cs490listener.mcnamee.io
+  timeout: 1000s
+  serviceAccountName: default

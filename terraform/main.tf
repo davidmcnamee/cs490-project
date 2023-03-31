@@ -162,6 +162,24 @@ resource "kubectl_manifest" "mysql_secret" {
   YAML
 }
 
+variable github_ci_token {
+  type = string
+  sensitive = true
+}
+
+resource "kubectl_manifest" "github_ci_token" {
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: github-ci-token
+      namespace: cs490-project
+    stringData:
+      token: ${var.github_ci_token}
+      secret: random-string-data
+  YAML
+}
+
 locals {
   mysql_host = "mysql.mysql.svc.cluster.local"
   database_url = "mysql://cs490user:${random_password.mysql_passwords["user"].result}@${local.mysql_host}:3306/cs490db"

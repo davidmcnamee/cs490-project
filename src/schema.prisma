@@ -23,6 +23,17 @@ model Retailer {
   country String
 }
 
+model RetailerYear {
+  retailer_id Int
+  year Int
+  @@id([retailer_id, year])
+
+  retailer_markup Float
+  display_costs Float
+  priority_shelving_costs Float
+  preferred_vendor_agreement_costs Float
+}
+
 model ProductRetailerYear {
   product_id Int 
   retailer_id Int
