@@ -97,7 +97,7 @@ metadata:
   generateName: static-analysis-pipeline-run-
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   pipelineRef:
     name: static-analysis-pipeline
