@@ -6,3 +6,4 @@ template
 build
 .secrets
 __pycache__
+*.tfvars

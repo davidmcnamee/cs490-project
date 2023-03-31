@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 from prisma import Prisma
 from prisma.models import ProductRetailerYear, Retailer
 from prisma.types import RetailerWhereInput
+from api.prices import get_average_price
 from api.stuff import hi
 import numpy_financial as npf
 
@@ -171,17 +172,10 @@ async def calc_output(
                     product_category,
                     model=ProductRetailerYear,
                 )
-                app.logger.info("data filters: %s", (retailer.id,
-                    year,
-                    contribution_margin - relevant_contribution_margin_range,
-                    contribution_margin + relevant_contribution_margin_range,
-                    list_price - relevant_list_price_range,
-                    list_price + relevant_list_price_range,
-                    product_brand,
-                    product_category,))
+
                 volume = sum([d.volume_sold for d in data_points]) / len(data_points) if data_points else 0
                 # list_price either provided by user OR external API (category) => average list_price
-                list_price = sum([d.list_price for d in data_points]) / len(data_points) if data_points else 0
+                list_price = retailer_to_list_price.get(retailer.name) or await get_average_price(product_category)
                 retailer_price = list_price * (1 + contribution_margin)
                 retailer_sales_revenue = volume * retailer_price
                 manufacturer_sales_revenue = volume * list_price

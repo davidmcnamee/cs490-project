@@ -1,5 +1,5 @@
 
-.PHONY: migrate seed admin_password
+.PHONY: migrate seed admin_password apply
 
 migrate:
 	kubectl port-forward -n mysql service/mysql 3306:3306 & \
@@ -15,3 +15,6 @@ seed:
 
 admin_password:
 	kubectl -n argo-cd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+apply:
+	cd terraform && terraform apply -auto-approve -var-file=env.tfvars

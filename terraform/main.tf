@@ -128,7 +128,18 @@ resource "kubectl_manifest" "tekton_kaniko" {
   yaml_body = data.http.tekton_kaniko_yaml.response_body
   override_namespace = "cs490-project"
 }
-
+data "http" "tekton_triggers_yaml" {
+  url = "https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml"
+}
+data "kubectl_file_documents" "tekton_triggers_docs" {
+  content = data.http.tekton_triggers_yaml.response_body
+}
+resource "kubectl_manifest" "tekton_triggers" {
+  for_each  = data.kubectl_file_documents.tekton_triggers_docs.manifests
+  yaml_body = each.value
+  depends_on = [kubectl_manifest.tekton_ns]
+  override_namespace = "argo-cd"
+}
 
 resource "random_password" "mysql_passwords" {
   length  = 16
@@ -160,6 +171,10 @@ output "database_url" {
   value = local.database_url
   sensitive = true
 }
+variable "price_api_token" {
+  type = string
+  sensitive = true
+}
 
 resource "kubectl_manifest" "cs490_ns" {
   yaml_body = <<-YAML
@@ -180,6 +195,7 @@ resource "kubectl_manifest" "api_secret" {
     type: Opaque
     data:
       DATABASE_URL: ${base64encode(local.database_url)}
+      PRICE_API_TOKEN: ${base64encode(var.price_api_token)}
   YAML
   depends_on = [kubectl_manifest.cs490_ns]
 }

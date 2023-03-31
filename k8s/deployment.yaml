@@ -23,3 +23,9 @@ spec:
             secretKeyRef:
               name: api-secret
               key: DATABASE_URL
+        - name: PRICE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: PRICE_API_TOKEN
+
