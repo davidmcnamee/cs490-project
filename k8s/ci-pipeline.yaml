@@ -3,7 +3,7 @@ kind: Task
 metadata:
   name: static-analysis-task
   annotations:
-    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   steps:
   - name: black
@@ -22,7 +22,7 @@ metadata:
   generateName: static-analysis-task-run-
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
-    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
   taskRef:
