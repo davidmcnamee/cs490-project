@@ -79,8 +79,6 @@ spec:
   - name: pyright
     taskRef:
       name: pyright-task
-    runAfter:
-      - ""
   - name: pylint
     taskRef:
       name: pylint-task
