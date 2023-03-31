@@ -32,12 +32,3 @@ spec:
             secretKeyRef:
               name: api-secret
               key: DATABASE_URL
-        - name: FLASK_RUN_HOST
-          value: '0.0.0.0'
-        - name: FLASK_APP
-          value: api/app.py
-        - name: FLASK_ENV
-          value: development 
-        - name: FLASK_DEBUG
-          value: "1"
-
