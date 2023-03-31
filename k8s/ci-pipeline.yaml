@@ -2,6 +2,8 @@ apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: pyright-task
+  annotations:
+    argocd.argoproj.io/hook: PreSync
 spec:
   steps:
   - name: pyright
@@ -23,6 +25,8 @@ apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: pylint-task
+  annotations:
+    argocd.argoproj.io/hook: PreSync
 spec:
   steps:
   - name: pylint
@@ -45,6 +49,8 @@ apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: black-task
+  annotations:
+    argocd.argoproj.io/hook: PreSync
 spec:
   steps:
   - name: black
@@ -66,6 +72,8 @@ apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: static-analysis-pipeline
+  annotations:
+    argocd.argoproj.io/hook: PreSync
 spec:
   tasks:
   - name: pyright
