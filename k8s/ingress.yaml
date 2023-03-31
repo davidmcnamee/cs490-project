@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cs490-ingress
+  namespace: cs490-project
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+spec:
+  ingressClassName: nginx
+  tls: 
+  - secretName: cs490-ssl
+    hosts: ['cs490.mcnamee.io']
+  rules:
+  - host: 'cs490.mcnamee.io'
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 80
+  defaultBackend:
+    service:
+      name: api
+      port:
+        number: 80
+

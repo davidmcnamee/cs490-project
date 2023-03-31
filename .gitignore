@@ -1,1 +1,8 @@
 .env
+.terraform*
+terraform.tfstate*
+
+template
+build
+.secrets
+__pycache__

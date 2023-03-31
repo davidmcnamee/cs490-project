@@ -1,0 +1,35 @@
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = -1
+}
+
+model Product {
+  id   Int @id @default(autoincrement())
+  brand_name String
+  category String
+}
+
+model Retailer {
+  id Int @id @default(autoincrement())
+  name String
+  shorthand String
+  country String
+}
+
+model ProductRetailerYear {
+  product_id Int 
+  retailer_id Int
+  year Int  
+  @@id([product_id, retailer_id, year])
+
+  contribution_margin Float
+  list_price Float
+  volume_sold Float
+}
