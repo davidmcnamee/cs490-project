@@ -21,8 +21,9 @@ kind: TaskRun
 metadata:
   generateName: static-analysis-task-run-
   annotations:
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
 spec:
   taskRef:
     name: static-analysis-task
