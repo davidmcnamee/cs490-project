@@ -8,10 +8,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 prisma = "^0.8.2"
-flask = {extras = ["async"], version = "^2.2.3"}
+flask = "2.1.0"
 pyopenssl = "^23.1.1"
 cryptography = "^40.0.1"
 numpy-financial = "^1.0.0"
+werkzeug = "2.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
