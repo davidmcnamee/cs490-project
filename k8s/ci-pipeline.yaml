@@ -1,106 +1,28 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: pyright-task
-  annotations:
-    argocd.argoproj.io/hook: PreSync
-spec:
-  steps:
-  - name: pyright
-    image: mcr.microsoft.com/vscode/pyright:latest
-    command:
-      - sh
-      - -c
-      - |
-        pyright src/
-    volumeMounts:
-      - name: source
-        mountPath: /workspace/src
-  volumes:
-    - name: source
-      emptyDir: {}
-
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: pylint-task
-  annotations:
-    argocd.argoproj.io/hook: PreSync
-spec:
-  steps:
-  - name: pylint
-    image: python:3.9
-    command:
-      - sh
-      - -c
-      - |
-        pip install pylint
-        pylint src/
-    volumeMounts:
-      - name: source
-        mountPath: /workspace/src
-  volumes:
-    - name: source
-      emptyDir: {}
-
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: black-task
+  name: static-analysis-task
   annotations:
     argocd.argoproj.io/hook: PreSync
 spec:
   steps:
   - name: black
-    image: python:3.9
+    image: davidmc1/cs490-project:latest
     command:
       - sh
       - -c
       - |
-        pip install black
-        black --check src/
-    volumeMounts:
-      - name: source
-        mountPath: /workspace/src
-  volumes:
-    - name: source
-      emptyDir: {}
+        poetry install
+        poetry run pylint api
+        if [ $? -ne 0 ]; then exit 1; fi
 ---
 apiVersion: tekton.dev/v1beta1
-kind: Pipeline
+kind: TaskRun
 metadata:
-  name: static-analysis-pipeline
-  annotations:
-    argocd.argoproj.io/hook: PreSync
-spec:
-  tasks:
-  - name: pyright
-    taskRef:
-      name: pyright-task
-  - name: pylint
-    taskRef:
-      name: pylint-task
-    runAfter:
-      - pyright
-  - name: black
-    taskRef:
-      name: black-task
-    runAfter:
-      - pylint
-
----
-apiVersion: tekton.dev/v1beta1
-kind: PipelineRun
-metadata:
-  generateName: static-analysis-pipeline-run-
+  generateName: static-analysis-task-run-
   annotations:
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  pipelineRef:
-    name: static-analysis-pipeline
-  workspaces:
-  - name: source
-    emptyDir: {}
+  taskRef:
+    name: static-analysis-task
