@@ -45,7 +45,7 @@ metadata:
   generateName: clone-build-push-run-
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded,HookFailed
 spec:
   pipelineRef:
     name: clone-build-push
