@@ -1,101 +1,100 @@
-# apiVersion: tekton.dev/v1beta1
-# kind: Pipeline
-# metadata:
-#   name: static-analysis-pipeline
-# spec:
-#   tasks:
-#   - name: pyright
-#     taskRef:
-#       name: pyright-task
-#     runAfter:
-#       - ""
-#   - name: pylint
-#     taskRef:
-#       name: pylint-task
-#     runAfter:
-#       - pyright
-#   - name: black
-#     taskRef:
-#       name: black-task
-#     runAfter:
-#       - pylint
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: pyright-task
+spec:
+  steps:
+  - name: pyright
+    image: mcr.microsoft.com/vscode/pyright:latest
+    command:
+      - sh
+      - -c
+      - |
+        pyright src/
+    volumeMounts:
+      - name: source
+        mountPath: /workspace/src
+  volumes:
+    - name: source
+      emptyDir: {}
 
-# ---
-# apiVersion: tekton.dev/v1beta1
-# kind: Task
-# metadata:
-#   name: pyright-task
-# spec:
-#   steps:
-#   - name: pyright
-#     image: mcr.microsoft.com/vscode/pyright:latest
-#     command:
-#       - sh
-#       - -c
-#       - |
-#         pyright src/
-#     volumeMounts:
-#       - name: source
-#         mountPath: /workspace/src
-#   volumes:
-#     - name: source
-#       emptyDir: {}
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: pylint-task
+spec:
+  steps:
+  - name: pylint
+    image: python:3.9
+    command:
+      - sh
+      - -c
+      - |
+        pip install pylint
+        pylint src/
+    volumeMounts:
+      - name: source
+        mountPath: /workspace/src
+  volumes:
+    - name: source
+      emptyDir: {}
 
-# ---
-# apiVersion: tekton.dev/v1beta1
-# kind: Task
-# metadata:
-#   name: pylint-task
-# spec:
-#   steps:
-#   - name: pylint
-#     image: python:3.9
-#     command:
-#       - sh
-#       - -c
-#       - |
-#         pip install pylint
-#         pylint src/
-#     volumeMounts:
-#       - name: source
-#         mountPath: /workspace/src
-#   volumes:
-#     - name: source
-#       emptyDir: {}
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: black-task
+spec:
+  steps:
+  - name: black
+    image: python:3.9
+    command:
+      - sh
+      - -c
+      - |
+        pip install black
+        black --check src/
+    volumeMounts:
+      - name: source
+        mountPath: /workspace/src
+  volumes:
+    - name: source
+      emptyDir: {}
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: static-analysis-pipeline
+spec:
+  tasks:
+  - name: pyright
+    taskRef:
+      name: pyright-task
+    runAfter:
+      - ""
+  - name: pylint
+    taskRef:
+      name: pylint-task
+    runAfter:
+      - pyright
+  - name: black
+    taskRef:
+      name: black-task
+    runAfter:
+      - pylint
 
-# ---
-# apiVersion: tekton.dev/v1beta1
-# kind: Task
-# metadata:
-#   name: black-task
-# spec:
-#   steps:
-#   - name: black
-#     image: python:3.9
-#     command:
-#       - sh
-#       - -c
-#       - |
-#         pip install black
-#         black --check src/
-#     volumeMounts:
-#       - name: source
-#         mountPath: /workspace/src
-#   volumes:
-#     - name: source
-#       emptyDir: {}
-
-# ---
-# apiVersion: tekton.dev/v1beta1
-# kind: PipelineRun
-# metadata:
-#   generateName: static-analysis-pipeline-run-
-#   annotations:
-#     argocd.argoproj.io/hook: PreSync
-#     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
-# spec:
-#   pipelineRef:
-#     name: static-analysis-pipeline
-#   workspaces:
-#   - name: source
-#     emptyDir: {}
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: static-analysis-pipeline-run-
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  pipelineRef:
+    name: static-analysis-pipeline
+  workspaces:
+  - name: source
+    emptyDir: {}
