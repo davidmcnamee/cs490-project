@@ -253,7 +253,7 @@ async def calc_output(
 
 @app.route('/', methods=['GET'])
 async def compute_sheet():
-    app.logger.info("version 1")
+    app.logger.info("version 2")
     json_data = request.args.get('json_data')
     assert json_data, "No data provided"
     data = json.loads(json_data)
