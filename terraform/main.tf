@@ -37,6 +37,72 @@ resource "helm_release" "mysql_chart" {
   depends_on = [kubectl_manifest.mysql_secret]
 }
 
+resource "helm_release" "argocd_chart" {
+  name             = "argo-cd"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  version          = "5.27.5"
+  namespace        = "argo-cd"
+  create_namespace = true
+  values           = [
+  ]
+  depends_on = [kubectl_manifest.mysql_secret]
+}
+
+resource "kubectl_manifest" "argocd_ingress" {
+  yaml_body = <<-YAML
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: argocd-ingress
+      namespace: argo-cd
+      annotations:
+        kubernetes.io/ingress.class: nginx
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    spec:
+      ingressClassName: nginx
+      tls: 
+      - secretName: argocd-ssl
+        hosts:
+          - 'argocd.mcnamee.io'
+      rules:
+      - host: 'argocd.mcnamee.io'
+        http:
+          paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argo-cd-argocd-server
+                port:
+                  name: https
+  YAML
+  depends_on = [kubectl_manifest.argocd_ssl]
+}
+
+resource "kubectl_manifest" "tekton_ns" {
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: tekton-pipelines
+  YAML
+}
+data "http" "tekton_pipeline_crds_yaml" {
+  url = "https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.46.0/release.yaml"
+}
+data "kubectl_file_documents" "tekton_pipeline_crds_docs" {
+  content = data.http.tekton_pipeline_crds_yaml.response_body
+}
+resource "kubectl_manifest" "tekton_pipeline_crds" {
+  for_each  = data.kubectl_file_documents.tekton_pipeline_crds_docs.manifests
+  yaml_body = each.value
+  depends_on = [kubectl_manifest.tekton_ns]
+}
+
 resource "random_password" "mysql_passwords" {
   length  = 16
   special = false
@@ -91,7 +157,26 @@ resource "kubectl_manifest" "api_secret" {
   depends_on = [kubectl_manifest.cs490_ns]
 }
 
-# only want this to apply once
+# only want this to apply once (thus keeping this in terraform)
+resource "kubectl_manifest" "argocd_ssl" {
+  yaml_body = <<-YAML
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: argocd-ssl
+    namespace: argo-cd
+  type: kubernetes.io/tls
+  stringData:
+    tls.key: "" # populated by Issuer/letsencrypt-production
+    tls.crt: ""
+  YAML
+  lifecycle {
+    ignore_changes = [yaml_body]
+  }
+  depends_on = [helm_release.argocd_chart]
+}
+
+# only want this to apply once (thus keeping this in terraform)
 resource "kubectl_manifest" "cs490_ssl" {
   yaml_body = <<-YAML
   apiVersion: v1

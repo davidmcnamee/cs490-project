@@ -14,6 +14,13 @@ cryptography = "^40.0.1"
 numpy-financial = "^1.0.0"
 
 
+[tool.poetry.group.dev.dependencies]
+pylint = "^2.17.1"
+pyright = "^1.1.301"
+bandit = "^1.7.5"
+flake8 = "^6.0.0"
+pycodestyle = "^2.10.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

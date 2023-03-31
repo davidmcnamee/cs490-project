@@ -21,9 +21,3 @@ spec:
             name: api
             port:
               number: 80
-  defaultBackend:
-    service:
-      name: api
-      port:
-        number: 80
-
