@@ -95,52 +95,6 @@ resource "kubectl_manifest" "argocd_ingress" {
   depends_on = [kubectl_manifest.argocd_ssl]
 }
 
-resource "kubectl_manifest" "tekton_ns" {
-  yaml_body = <<-YAML
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: tekton-pipelines
-  YAML
-}
-data "http" "tekton_pipeline_crds_yaml" {
-  url = "https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.46.0/release.yaml"
-}
-data "kubectl_file_documents" "tekton_pipeline_crds_docs" {
-  content = data.http.tekton_pipeline_crds_yaml.response_body
-}
-resource "kubectl_manifest" "tekton_pipeline_crds" {
-  for_each  = data.kubectl_file_documents.tekton_pipeline_crds_docs.manifests
-  yaml_body = each.value
-  depends_on = [kubectl_manifest.tekton_ns]
-}
-data "http" "tekton_git_clone_yaml" {
-  url = "https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.9/git-clone.yaml"
-}
-resource "kubectl_manifest" "tekton_git_clone" {
-  yaml_body = data.http.tekton_git_clone_yaml.response_body
-  override_namespace = "cs490-project"
-}
-data "http" "tekton_kaniko_yaml" {
-  url = "https://raw.githubusercontent.com/tektoncd/catalog/main/task/kaniko/0.6/kaniko.yaml"
-}
-resource "kubectl_manifest" "tekton_kaniko" {
-  yaml_body = data.http.tekton_kaniko_yaml.response_body
-  override_namespace = "cs490-project"
-}
-data "http" "tekton_triggers_yaml" {
-  url = "https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml"
-}
-data "kubectl_file_documents" "tekton_triggers_docs" {
-  content = data.http.tekton_triggers_yaml.response_body
-}
-resource "kubectl_manifest" "tekton_triggers" {
-  for_each  = data.kubectl_file_documents.tekton_triggers_docs.manifests
-  yaml_body = each.value
-  depends_on = [kubectl_manifest.tekton_ns]
-  override_namespace = "argo-cd"
-}
-
 resource "random_password" "mysql_passwords" {
   length  = 16
   special = false
@@ -162,7 +116,7 @@ resource "kubectl_manifest" "mysql_secret" {
   YAML
 }
 
-variable github_ci_token {
+variable "github_ci_token" {
   type = string
   sensitive = true
 }
