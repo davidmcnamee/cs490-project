@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3-slim
+FROM python:3.10.8-slim
 
 WORKDIR /code/src
 EXPOSE 5000
