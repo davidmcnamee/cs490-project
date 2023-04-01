@@ -23,7 +23,7 @@ TODO: add gif of custom google sheets function in use
 
 ### Code Analysis / Testing
 
-We use both static-analysis and dynamic-analysis tooling in order to ensure that our code is safe, clean, correct, and secure. For static analysis, we're using [Black]() as our python formatter and [Pylint]() as our linter. For dynamic analysis, we're using Google's [Atheris]() to fuzz our code for security vulnerabilities (among other things). These are automated in our CI pipeline, which is instrumented by Github Actions ([.github/workflows/]()).
+We use both static-analysis and dynamic-analysis tooling in order to ensure that our code is safe, clean, correct, and secure. For static analysis, we're using [Black](https://github.com/psf/black) as our python formatter and [Pylint](https://pypi.org/project/pylint/) as our linter. For dynamic analysis, we're using Google's [Atheris](https://github.com/google/atheris) to fuzz our code for security vulnerabilities (among other things). These are automated in our CI pipeline, which is instrumented by Github Actions ([.github/workflows/](.github/workflows)).
 
 ### Deployment
 We're deploying to a Kubernetes cluster hosted in [Hetzner Cloud](https://www.hetzner.com/cloud) (provisioned by [kube-hetzner](https://github.com/kube-hetzner/terraform-hcloud-kube-hetzner)). We use a combination of Terraform ([terraform/]()) and yaml manifests ([k8s/]()) to push Kubernetes objects to that cluster. In particular, secrets are provisioned via Terraform (an IaC tool) because it reduces the burden of passing around gitignore'd yaml files containing secrets to other team members. 
