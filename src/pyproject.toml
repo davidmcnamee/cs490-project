@@ -6,7 +6,7 @@ authors = ["David McNamee <david@mcnamee.io>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 prisma = "^0.8.2"
 pyopenssl = "^23.1.1"
 cryptography = "^40.0.1"
@@ -22,6 +22,8 @@ pyright = "^1.1.301"
 bandit = "^1.7.5"
 flake8 = "^6.0.0"
 pycodestyle = "^2.10.0"
+wrapt = "^1.15.0"
+black = "^23.3.0"
 
 [build-system]
 requires = ["poetry-core"]

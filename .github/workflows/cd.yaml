@@ -1,8 +1,9 @@
 name: ci
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  push:
+    branches:
+      - 'main'
 
 jobs:
   docker:
@@ -20,9 +21,11 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          push: false
+          push: true
           tags: davidmc1/cs490-project:latest
           context: "{{defaultContext}}:src"
+
+  # updates the badge in the README
   lint:
     runs-on: ubuntu-latest
     steps:
