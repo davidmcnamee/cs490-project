@@ -1,9 +1,9 @@
 name: ci
 
 on:
-  push:
-    branches:
-      - 'main'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, closed]
 
 jobs:
   docker:
@@ -29,6 +29,9 @@ jobs:
     steps:
       - name: Install Poetry
         uses: snok/install-poetry@v1
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Install dependencies
         run: cd src && poetry install
       - name: Lint
