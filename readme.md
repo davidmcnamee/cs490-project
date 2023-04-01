@@ -16,3 +16,4 @@ From this, the model will query for historical sales data points that are most c
 This is implemented as Custom Google Sheets function that makes an HTTP request to a Flask API in the cloud. Users can use the model by simply calling a special function `PROJECT_SALES` function in their existing spreadsheet. The output is a table of sales and revenue forecasts.
 
 
+TODO: need screenshots
