@@ -22,6 +22,7 @@ pyright = "^1.1.301"
 bandit = "^1.7.5"
 flake8 = "^6.0.0"
 pycodestyle = "^2.10.0"
+wrapt = "^1.15.0"
 
 [build-system]
 requires = ["poetry-core"]
