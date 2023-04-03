@@ -67,7 +67,7 @@ async def get_prices(product_category: str) -> List[float]:
 
     response = await loop.run_in_executor(None, get_job_results)
     search_results = response.json()["results"][0]["content"]["search_results"]
-    return [(r["min_price"] + r["max_price"]) / 2 for r in search_results]
+    return [(float(r["min_price"]) + float(r["max_price"])) / 2 for r in search_results]
 
 
 @alru_cache(maxsize=200)
