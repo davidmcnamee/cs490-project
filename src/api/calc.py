@@ -4,7 +4,7 @@ Calculates the predicted sales data and returns as a spreadsheet.
 
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Tuple, Literal
 
 import numpy_financial as npf
 from prisma import Prisma
@@ -33,7 +33,7 @@ async def calc_output(
     product_category: str,
     product_brand: str,
     contribution_margin: float,
-    retailer_to_list_price: Dict[str, float],
+    retailers_mapping: Dict[str, Tuple[bool, float | Literal[""]]],
     num_years: int,
     desired_irr: float,
     inital_investment: float,
@@ -44,12 +44,12 @@ async def calc_output(
     Main function: computes spreadsheet of predicted sales data
     for a new product with given parameters.
     """
-    num_retailers = len(retailer_to_list_price)
+    num_retailers = len(retailers_mapping)
     db = Prisma()  # pylint: disable=invalid-name
     await db.connect()
     try:
         retailers = await db.retailer.find_many(
-            where={"name": {"in": list(retailer_to_list_price.keys())}}
+            where={"name": {"in": [k for k, v in retailers_mapping.items() if v[0] == True]}}
         )
         output, offsets = create_template_sheet(retailers, num_years)
         (
@@ -72,9 +72,11 @@ async def calc_output(
             total_manufacturer_gross_revenue = 0
             total_fixed_costs = 0
             for i, retailer in enumerate(retailers):
-                list_price = retailer_to_list_price.get(
-                    retailer.name, await get_average_price(product_category)
-                )
+                if retailer.name in retailers_mapping and isinstance(retailers_mapping[retailer.name][1], float):
+                    list_price = float(retailers_mapping[retailer.name][1])
+                else:
+                    list_price = await get_average_price(product_category)
+
                 data_points = await db.query_raw(
                     """
                     SELECT *

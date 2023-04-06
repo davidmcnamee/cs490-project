@@ -25,7 +25,7 @@ async def compute_sheet():
         product_category=data["product_category"],
         product_brand=data["product_brand"],
         contribution_margin=data["contribution_margin"],
-        retailer_to_list_price=matrix_to_mapping(data["retailer_to_list_price"]),
+        retailers_mapping=matrix_to_mapping(data["retailer_to_list_price"]),
         num_years=data["num_years"],
         desired_irr=data["desired_irr"],
         inital_investment=data["inital_investment"],
@@ -38,13 +38,12 @@ async def compute_sheet():
 def matrix_to_mapping(matrix: List[List[Any]]) -> Dict[str, Any]:
     """
     Converts a matrix of values into a dictionary that maps from the
-    first column to the 2nd column.
+    first column to the remaining columns.
     """
-    m, n = len(matrix), len(matrix[0])  # pylint: disable=invalid-name
-    assert n == 2, "Mappings must have 2 columns"
+    m = len(matrix)  # pylint: disable=invalid-name
     mapping = {}
     for i in range(m):
-        mapping[matrix[i][0]] = matrix[i][1]
+        mapping[matrix[i][0]] = tuple(matrix[i][1:])
     return mapping
 
 

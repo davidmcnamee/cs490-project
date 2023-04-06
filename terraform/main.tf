@@ -58,8 +58,22 @@ resource "helm_release" "argocd_chart" {
   create_namespace = true
   values           = [
   ]
-  depends_on = [kubectl_manifest.mysql_secret]
 }
+
+resource "helm_release" "redis_chart" {
+  name             = "redis"
+  repository       = "https://charts.bitnami.com/bitnami"
+  chart            = "redis-cluster"
+  version          = "8.4.3"
+  namespace        = "redis"
+  create_namespace = true
+  values           = [
+    <<-YAML
+    usePassword: false
+    YAML
+  ]
+}
+
 
 resource "kubectl_manifest" "argocd_ingress" {
   yaml_body = <<-YAML
