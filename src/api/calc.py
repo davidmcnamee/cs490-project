@@ -44,12 +44,13 @@ async def calc_output(
     Main function: computes spreadsheet of predicted sales data
     for a new product with given parameters.
     """
-    num_retailers = len(retailers_mapping)
+    enabled_retailers = [k for k, v in retailers_mapping if v[0] == True]
+    num_retailers = len(enabled_retailers)
     db = Prisma()  # pylint: disable=invalid-name
     await db.connect()
     try:
         retailers = await db.retailer.find_many(
-            where={"name": {"in": [k for k, v in retailers_mapping.items() if v[0] == True]}}
+            where={"name": {"in": enabled_retailers}}
         )
         output, offsets = create_template_sheet(retailers, num_years)
         (
