@@ -19,20 +19,25 @@ async def compute_sheet():
     API route to compute the spreadsheet, called by custom function in Google Sheets.
     """
     json_data = request.args.get("json_data")
-    assert json_data, "No data provided"
-    data = json.loads(json_data)
-    output = await calc_output(
-        product_category=data["product_category"],
-        product_brand=data["product_brand"],
-        contribution_margin=data["contribution_margin"],
-        retailers_mapping=matrix_to_mapping(data["retailer_to_list_price"]),
-        num_years=data["num_years"],
-        desired_irr=data["desired_irr"],
-        inital_investment=data["inital_investment"],
-        relevant_contribution_margin_range=data["relevant_contribution_margin_range"],
-        relevant_list_price_range=data["relevant_list_price_range"],
-    )
-    return output
+    try:
+        assert json_data, "No data provided"
+        data = json.loads(json_data)
+        output = await calc_output(
+            product_category=data["product_category"],
+            product_brand=data["product_brand"],
+            variable_cost=data["variable_cost"],
+            retailers_mapping=matrix_to_mapping(data["retailers_mapping"]),
+            num_years=data["num_years"],
+            desired_irr=data["desired_irr"],
+            inital_investment=data["inital_investment"],
+            relevant_contribution_margin_range=data["relevant_contribution_margin_range"],
+            relevant_list_price_range=data["relevant_list_price_range"],
+        )
+        return output
+    except AssertionError as e:
+        return {"message": str(e)}, 400
+    except Exception as e:
+        return {"message": str(e)}, 500
 
 
 def matrix_to_mapping(matrix: List[List[Any]]) -> Dict[str, Any]:

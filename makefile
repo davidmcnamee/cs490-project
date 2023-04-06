@@ -1,5 +1,5 @@
 
-.PHONY: migrate seed admin_password apply
+.PHONY: migrate seed admin_password apply quick_sync
 
 migrate:
 	kubectl port-forward -n mysql service/mysql 3306:3306 & \
@@ -18,3 +18,7 @@ admin_password:
 
 apply:
 	cd terraform && terraform apply -auto-approve -var-file=env.tfvars
+
+quick_sync:
+	docker buildx build --platform=linux/amd64 -t davidmc1/cs490-project src/ --push
+	kubectl delete pod --all -n cs490-project

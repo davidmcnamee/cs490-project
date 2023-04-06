@@ -2,13 +2,14 @@
 Calculates the predicted sales data and returns as a spreadsheet.
 """
 
-
+import sys
 from dataclasses import dataclass
 from typing import Dict, Tuple, Literal
 
+import numpy as np
 import numpy_financial as npf
 from prisma import Prisma
-from prisma.models import ProductRetailerYear
+from prisma.models import ProductRetailerYear, RetailerYear
 
 from api.prices import get_average_price
 from api.util import create_template_sheet
@@ -32,7 +33,7 @@ class RetailerTotals:
 async def calc_output(
     product_category: str,
     product_brand: str,
-    contribution_margin: float,
+    variable_cost: float,
     retailers_mapping: Dict[str, Tuple[bool, float | Literal[""]]],
     num_years: int,
     desired_irr: float,
@@ -44,7 +45,7 @@ async def calc_output(
     Main function: computes spreadsheet of predicted sales data
     for a new product with given parameters.
     """
-    enabled_retailers = [k for k, v in retailers_mapping if v[0] == True]
+    enabled_retailers = [k for k, v in retailers_mapping.items() if v[0] == True]
     num_retailers = len(enabled_retailers)
     db = Prisma()  # pylint: disable=invalid-name
     await db.connect()
@@ -52,6 +53,9 @@ async def calc_output(
         retailers = await db.retailer.find_many(
             where={"name": {"in": enabled_retailers}}
         )
+        discovered_retailers = {r.name for r in retailers}
+        missing = [r for r in enabled_retailers if r not in discovered_retailers]
+        assert not missing, f"Couldn't find {missing} in database, please ask finance department to input data for this retailer."
         output, offsets = create_template_sheet(retailers, num_years)
         (
             volume_offset,
@@ -73,11 +77,25 @@ async def calc_output(
             total_manufacturer_gross_revenue = 0
             total_fixed_costs = 0
             for i, retailer in enumerate(retailers):
+                retailer_agreements = await db.query_raw(
+                    """
+                    SELECT *
+                    FROM RetailerYear
+                    WHERE retailer_id = ?
+                    AND year = ?
+                    """,
+                    retailer.id,
+                    year,
+                    model=RetailerYear
+                )
+                retailer_agreement = retailer_agreements[0]
+                
                 if retailer.name in retailers_mapping and isinstance(retailers_mapping[retailer.name][1], float):
                     list_price = float(retailers_mapping[retailer.name][1])
                 else:
-                    list_price = await get_average_price(product_category)
+                    list_price = (await get_average_price(product_category)) / (1+ retailer_agreement.retailer_markup)
 
+                contribution_margin = (list_price - variable_cost) / list_price
                 data_points = await db.query_raw(
                     """
                     SELECT *
@@ -107,13 +125,16 @@ async def calc_output(
                     if data_points
                     else 0
                 )
-                retailer_price = list_price * (1 + contribution_margin)
+                retailer_price = list_price * (1 + retailer_agreement.retailer_markup)
                 retailer_sales_revenue = volume * retailer_price
                 manufacturer_sales_revenue = volume * list_price
                 manufacturer_gross_revenue = (
                     manufacturer_sales_revenue * contribution_margin
                 )
-                fixed_costs = inital_investment
+                fixed_costs = (
+                    retailer_agreement.display_costs +
+                    retailer_agreement.priority_shelving_costs +
+                    retailer_agreement.preferred_vendor_agreement_costs)
 
                 total_volume += volume
                 total_retailer_sales_revenue += retailer_sales_revenue
@@ -194,6 +215,10 @@ async def calc_output(
 
         npv = npf.npv(desired_irr, cashflows)
         irr = npf.irr(cashflows)
+        print('old irr: ', irr, file=sys.stderr)
+        if np.isnan(irr):
+            irr = -999999999
+        print('new irr: ', irr, file=sys.stderr)
         output[net_revenue_offset + 3][1] = npv
         output[net_revenue_offset + 4][1] = irr
         if npv < 0:
@@ -207,6 +232,7 @@ async def calc_output(
         else:
             output[net_revenue_offset + 5][1] = "Project is Financially Viable. Accept."
 
+        print('output: ', output, file=sys.stderr)
         return output
     finally:
         await db.disconnect()

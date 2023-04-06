@@ -18,16 +18,21 @@ async def main():
         ['Loblaws', 'Canada', 'LOB'],
         ["Shopper's Drug Mart", 'Canada', 'SDM'],
         ['Rexall', 'Canada', 'REX'],
+        ['Costco', 'Canada', 'COS'],
     ]
     product_data = [
         ['Crest 3D White', 'Toothpaste'],
-        ['Colgate', 'Toothpaste'],
-        ['Quip', 'Toothpaste'],
-        ['Arm & Hammer', 'Toothpaste'],
-        ['Ferrari', 'Car'],
-        ['Tesla', 'Car'],
-        ['Volkswagen', 'Car'],
-        ['Toyota', 'Car'],
+        ['Crest Pro-Health', 'Toothpaste'],
+        ['Crest Complete Plus', 'Toothpaste'],
+        ['Crest Kids', 'Toothpaste'],
+        ['Crest 3D White', 'Mouthwash'],
+        ['Crest Pro-Health', 'Mouthwash'],
+        ['Oral-B Kids', 'Toothbrush'],
+        ['Oral-B Pro-Health', 'Toothbrush'],
+        ['Oral-B iO', 'Toothbrush'],
+        ['Crest 3D White', 'Floss'],
+        ['Oral-B Kids', 'Floss'],
+        ['Oral-B Pro-Health', 'Floss'],
     ]
     await db.retailer.create_many(
         data=[RetailerCreateInput(
@@ -46,28 +51,31 @@ async def main():
     await db.retaileryear.create_many(
         data = [
         RetailerYearCreateInput(
-            retailer_id=random.choice(retailers).id,
-            year=random.randint(1, 5),
+            retailer_id=retailer.id,
+            year=year,
             retailer_markup=random.random() * 0.4,
             display_costs=random.randint(0, 50000),
             priority_shelving_costs=random.randint(0, 50000),
             preferred_vendor_agreement_costs=random.randint(0, 50000),
         )
-        for _ in range(300)],
+        for retailer in retailers
+        for year in range(1, 8+1)],
         skip_duplicates=True
     )
     products = await db.product.find_many()
     await db.productretaileryear.create_many(
         data = [
         ProductRetailerYearCreateInput(
-            retailer_id=random.choice(retailers).id,
-            product_id=random.choice(products).id,
-            year=random.randint(1, 5),
+            retailer_id=retailer.id,
+            product_id=product.id,
+            year=year,
             volume_sold=random.randint(0, 50000),
             list_price=random.random() * 30.0,
             contribution_margin=random.random() * 0.4,
         )
-        for _ in range(300)],
+        for product in products
+        for retailer in retailers
+        for year in range(1, 8+1)],
         skip_duplicates=True
     )
     print('Done ✨')
