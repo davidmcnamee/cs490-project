@@ -8,6 +8,10 @@ from typing import List
 
 import requests
 from async_lru import alru_cache
+import logging
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
+
 
 headers = {"accept": "application/json", "content-type": "application/json"}
 params = {"token": os.environ["PRICE_API_TOKEN"]}
@@ -67,7 +71,11 @@ async def get_prices(product_category: str) -> List[float]:
 
     response = await loop.run_in_executor(None, get_job_results)
     search_results = response.json()["results"][0]["content"]["search_results"]
-    return [(float(r["min_price"]) + float(r["max_price"])) / 2 for r in search_results]
+    print('results: ', search_results, file=sys.stderr)
+    nested_prices = [[r["min_price"], r["max_price"]] for r in search_results]
+    filtered_prices = [[float(p) for p in arr if p] for arr in nested_prices] # filter out None values
+    avg_prices = [sum(arr) / len(arr) for arr in filtered_prices if arr]
+    return avg_prices
 
 
 @alru_cache(maxsize=200)
@@ -77,6 +85,7 @@ async def get_average_price(product_category: str) -> float:
         prices = await get_prices(product_category)
         assert len(prices) > 0, f"No prices found for category {product_category}"
     except Exception as e:
+        logger.exception(e)
         print(f'failed to fetch prices for {product_category}:', e, file=sys.stderr)
         return 0
     return sum(prices) / len(prices)
